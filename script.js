@@ -14,7 +14,7 @@
    BACKEND CONFIG
    Change this to your Railway URL after deploying
 ══════════════════════════════════════ */
-const API_URL = 'https://medicompanion-backend.vercel.app';
+const API_URL = 'http://localhost:3000'; // ← replace with Railway URL after deploy
 
 /* ══════════════════════════════════════
    STATE
