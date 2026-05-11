@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediCompanion — Medicine Reminders & AI Symptom Checker</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,300;0,500;1,300;1,500&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0a0f0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MediCompanion" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+</head>
+<body>
+
+  <!-- ══════════════════════════
+       APP HEADER (always visible)
+  ══════════════════════════ -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">✚</div>
+        <span class="logo-text">MediCompanion</span>
+      </div>
+      <nav class="nav" id="main-nav">
+        <button class="nav-btn" id="nav-home" onclick="showTab('home')">
+          <span class="nav-icon">⊞</span><span class="nav-label">Home</span>
+        </button>
+        <button class="nav-btn" id="nav-reminders" onclick="showTab('reminders')">
+          <span class="nav-icon">🔔</span><span class="nav-label">Reminders</span>
+        </button>
+        <button class="nav-btn" id="nav-symptom" onclick="showTab('symptom')">
+          <span class="nav-icon">🩺</span><span class="nav-label">Symptoms</span>
+        </button>
+      </nav>
+      <div class="header-right">
+        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+          <span id="theme-icon">☀️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- PWA install bar -->
+  <div class="pwa-install-bar hidden" id="pwa-install-bar">
+    <span>📱 Install MediCompanion as an app</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="pwa-install-btn" onclick="installPWA()">Install</button>
+      <button class="pwa-dismiss-btn" onclick="document.getElementById('pwa-install-bar').classList.add('hidden')">✕</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════
+       TAB: HOME (feature overview)
+  ══════════════════════════ -->
+  <section class="tab-page" id="tab-home">
+    <div class="home-wrap">
+
+      <!-- Top greeting -->
+      <div class="home-greeting">
+        <div>
+          <p class="home-hello" id="home-hello">Good morning</p>
+          <h1 class="home-headline">Your medicines.<br/><em>Remembered.</em></h1>
+        </div>
+        <button class="home-add-btn" onclick="showTab('reminders'); openModal()">+ Add Medicine</button>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="home-stats">
+        <div class="hstat-card">
+          <p class="hstat-num" id="hstat-total">0</p>
+          <p class="hstat-label">Medicines</p>
+        </div>
+        <div class="hstat-card hstat-green">
+          <p class="hstat-num" id="hstat-taken">0</p>
+          <p class="hstat-label">Taken today</p>
+        </div>
+        <div class="hstat-card hstat-amber">
+          <p class="hstat-num" id="hstat-pending">0</p>
+          <p class="hstat-label">Pending</p>
+        </div>
+      </div>
+
+      <!-- Today's next medicine -->
+      <div class="home-next" id="home-next"></div>
+
+      <!-- Feature cards grid -->
+      <p class="home-section-label">What you can do</p>
+      <div class="home-feat-grid">
+
+        <div class="hfeat-card hfeat-dark" onclick="showTab('reminders')">
+          <div class="hfeat-tag">Reminders</div>
+          <div class="hfeat-icon">💊</div>
+          <h3 class="hfeat-title">Smart reminders</h3>
+          <p class="hfeat-desc">Add medicines, set times, get notified even when the app is closed.</p>
+          <div class="hfeat-list">
+            <span>· Colour-coded medicines</span>
+            <span>· Daily timeline view</span>
+            <span>· Mark doses with one tap</span>
+          </div>
+          <div class="hfeat-arrow">→</div>
+        </div>
+
+        <div class="hfeat-card hfeat-green" onclick="showTab('symptom')">
+          <div class="hfeat-tag">AI Powered</div>
+          <div class="hfeat-icon">🩺</div>
+          <h3 class="hfeat-title">Symptom checker</h3>
+          <p class="hfeat-desc">Search any symptom or disease. 80+ conditions available offline.</p>
+          <div class="hfeat-list">
+            <span>· Instant offline results</span>
+            <span>· AI search for rare conditions</span>
+            <span>· Guided 5-question check</span>
+          </div>
+          <div class="hfeat-arrow">→</div>
+        </div>
+
+        <div class="hfeat-card hfeat-light" onclick="showTab('reminders')">
+          <div class="hfeat-tag">Unique advantage</div>
+          <div class="hfeat-icon">📴</div>
+          <h3 class="hfeat-title">Fully offline</h3>
+          <p class="hfeat-desc">Works without internet. Your data never leaves your device.</p>
+          <div class="hfeat-list">
+            <span>· No account needed</span>
+            <span>· No data sent online</span>
+            <span>· Works on Android & iOS</span>
+          </div>
+          <div class="hfeat-arrow">→</div>
+        </div>
+
+      </div>
+
+      <p class="home-disclaimer">⚠ General health info only — always consult a qualified doctor for medical advice.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════
+       TAB: REMINDERS
+  ══════════════════════════ -->
+  <section class="tab-page hidden" id="tab-reminders">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">My Medicines</h2>
+        <p class="page-sub" id="date-label"></p>
+      </div>
+      <button class="btn-primary" onclick="openModal()">+ Add</button>
+    </div>
+
+    <div class="notice notice-amber" id="notif-banner" style="display:none;">
+      <span>🔔 Enable notifications for medicine alerts</span>
+      <button class="notice-btn" onclick="requestNotifPermission()">Enable</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <p class="stat-num" id="stat-total">0</p>
+        <p class="stat-label">Total</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-num green" id="stat-taken">0</p>
+        <p class="stat-label">Taken today</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-num amber" id="stat-pending">0</p>
+        <p class="stat-label">Pending</p>
+      </div>
+    </div>
+
+    <div id="timeline-section" style="display:none;">
+      <h3 class="section-heading">Today's schedule</h3>
+      <div class="timeline" id="timeline"></div>
+    </div>
+
+    <h3 class="section-heading" id="list-heading" style="display:none;">All medicines</h3>
+    <div class="medicine-list" id="medicine-list"></div>
+
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">💊</div>
+      <p class="empty-title">No medicines added yet</p>
+      <p class="empty-sub">Tap "+ Add" above to set your first reminder</p>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════
+       TAB: SYMPTOM CHECKER
+  ══════════════════════════ -->
+  <section class="tab-page hidden" id="tab-symptom">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">Symptom Checker</h2>
+        <p class="page-sub">Search any symptom or disease — works offline</p>
+      </div>
+    </div>
+
+    <div class="mode-switcher">
+      <button class="mode-btn active" id="mode-guided-btn" onclick="switchMode('guided')">🩺 Guided Check</button>
+      <button class="mode-btn" id="mode-search-btn" onclick="switchMode('search')">🔍 Search Disease</button>
+    </div>
+
+    <div id="guided-mode">
+      <div class="symptom-wrapper">
+        <div class="step-bar" id="step-bar">
+          <div class="step-dot active" id="dot-0"></div>
+          <div class="step-dot" id="dot-1"></div>
+          <div class="step-dot" id="dot-2"></div>
+          <div class="step-dot" id="dot-3"></div>
+          <div class="step-dot" id="dot-4"></div>
+        </div>
+        <div class="symptom-card" id="symptom-card"></div>
+        <div class="result-card hidden" id="result-card"></div>
+        <div class="symptom-nav">
+          <button class="btn-ghost" id="btn-back" onclick="symptomBack()" style="display:none">← Back</button>
+          <button class="btn-primary" id="btn-next" onclick="symptomNext()">Next →</button>
+          <button class="btn-primary hidden" id="btn-restart" onclick="restartSymptom()">Check again</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="search-mode" class="hidden">
+      <div class="search-wrapper">
+        <div class="search-box-wrap">
+          <span class="search-icon-inner">🔍</span>
+          <input type="text" id="symptom-search-input" class="symptom-search-input"
+            placeholder="e.g. allergy, diabetes, dengue, migraine..."
+            oninput="onSymptomSearch(this.value)" />
+          <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none">✕</button>
+        </div>
+        <div class="suggestion-pills">
+          <span class="pill-label">Try:</span>
+          <button class="sugg-pill" onclick="searchFor('fever')">🌡️ Fever</button>
+          <button class="sugg-pill" onclick="searchFor('allergy')">🌿 Allergy</button>
+          <button class="sugg-pill" onclick="searchFor('diabetes')">🩸 Diabetes</button>
+          <button class="sugg-pill" onclick="searchFor('migraine')">🧠 Migraine</button>
+          <button class="sugg-pill" onclick="searchFor('cold')">🤧 Cold</button>
+          <button class="sugg-pill" onclick="searchFor('hypertension')">❤️ BP</button>
+          <button class="sugg-pill" onclick="searchFor('dengue')">🦟 Dengue</button>
+          <button class="sugg-pill" onclick="searchFor('anxiety')">😰 Anxiety</button>
+        </div>
+        <div id="search-result-area"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════
+       BOTTOM NAV (mobile)
+  ══════════════════════════ -->
+  <nav class="bottom-nav">
+    <button class="bnav-btn active" id="bnav-home" onclick="showTab('home')">
+      <span class="bnav-icon">⊞</span>
+      <span class="bnav-label">Home</span>
+    </button>
+    <button class="bnav-btn" id="bnav-reminders" onclick="showTab('reminders')">
+      <span class="bnav-icon">🔔</span>
+      <span class="bnav-label">Reminders</span>
+    </button>
+    <button class="bnav-btn" id="bnav-symptom" onclick="showTab('symptom')">
+      <span class="bnav-icon">🩺</span>
+      <span class="bnav-label">Symptoms</span>
+    </button>
+  </nav>
+
+  <!-- ADD MEDICINE MODAL -->
+  <div class="modal-overlay hidden" id="modal-overlay" onclick="closeModalOnBg(event)">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Add Medicine">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Medicine</h3>
+        <button class="modal-close" onclick="closeModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="med-name">Medicine name *</label>
+          <input class="form-input" type="text" id="med-name" placeholder="e.g. Paracetamol 500mg" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="med-dose">Dose / notes</label>
+          <input class="form-input" type="text" id="med-dose" placeholder="e.g. 1 tablet after food" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="med-time">Reminder time *</label>
+          <input class="form-input" type="time" id="med-time" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frequency</label>
+          <select class="form-input" id="med-freq">
+            <option value="Daily">Daily</option>
+            <option value="Twice a day">Twice a day</option>
+            <option value="Thrice a day">Thrice a day</option>
+            <option value="Weekly">Weekly</option>
+            <option value="As needed">As needed</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Colour tag</label>
+          <div class="color-picker" id="color-picker">
+            <button class="color-dot selected" data-color="green"  style="background:#1a9e72" onclick="pickColor('green',this)"></button>
+            <button class="color-dot"          data-color="blue"   style="background:#3b82f6" onclick="pickColor('blue',this)"></button>
+            <button class="color-dot"          data-color="amber"  style="background:#f0a500" onclick="pickColor('amber',this)"></button>
+            <button class="color-dot"          data-color="red"    style="background:#e24b4a" onclick="pickColor('red',this)"></button>
+            <button class="color-dot"          data-color="purple" style="background:#8b5cf6" onclick="pickColor('purple',this)"></button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="addMedicine()">Save Reminder</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="diseases.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
