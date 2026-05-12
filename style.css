@@ -1152,3 +1152,187 @@ html, body {
     min-width: 200px;
   }
 }
+
+/* ══════════════════════════════════════════
+   ONBOARDING SCREEN
+   Full-screen, shows only on first visit
+══════════════════════════════════════════ */
+.onboarding-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease;
+}
+
+.onboarding-wrap {
+  max-width: 480px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+  padding: 20px 0 40px;
+}
+
+.onb-logo {
+  margin-bottom: 28px;
+}
+
+.onb-title {
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 6vw, 52px);
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--text-1);
+  margin-bottom: 16px;
+}
+.onb-title em {
+  font-style: italic;
+  color: var(--green);
+}
+
+.onb-sub {
+  font-size: 15px;
+  color: var(--text-2);
+  line-height: 1.7;
+  max-width: 380px;
+  margin-bottom: 36px;
+}
+
+/* Feature list */
+.onb-features {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.onb-feat {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  transition: background 0.15s;
+}
+.onb-feat:last-child { border-bottom: none; }
+.onb-feat:hover { background: var(--bg3); }
+
+.onb-feat-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.onb-feat-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 3px;
+}
+.onb-feat-desc {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+/* Get started button */
+.onb-cta {
+  width: 100%;
+  max-width: 320px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 14px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 4px 20px rgba(26,158,114,0.35);
+  margin-bottom: 16px;
+}
+.onb-cta:hover {
+  background: var(--green-d);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(26,158,114,0.45);
+}
+.onb-cta:active { transform: translateY(0); }
+
+.onb-disclaimer {
+  font-size: 11px;
+  color: var(--text-3);
+  max-width: 360px;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+
+/* ── HOME DASHBOARD quick actions ── */
+.home-quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.quick-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: all 0.15s ease;
+}
+.quick-btn:hover {
+  background: var(--bg3);
+  border-color: var(--border2);
+  color: var(--text-1);
+  transform: translateY(-2px);
+}
+.quick-btn-green {
+  background: var(--green-l);
+  border-color: rgba(26,158,114,0.25);
+  color: var(--green);
+}
+.quick-btn-green:hover {
+  background: rgba(26,158,114,0.2);
+  color: var(--green-d);
+}
+.quick-icon { font-size: 22px; }
+
+@media (max-width: 480px) {
+  .home-quick { grid-template-columns: repeat(2, 1fr); }
+  .onb-cta { max-width: 100%; }
+  .onboarding-wrap { padding: 10px 0 30px; }
+}
+
+/* Slide-out animation for onboarding */
+@keyframes slideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-20px); }
+}
+.onboarding-screen.leaving {
+  animation: slideOut 0.35s ease forwards;
+}

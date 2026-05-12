@@ -101,7 +101,7 @@
       <div id="auth-signup-form" class="hidden">
         <div class="form-group">
           <label class="form-label" for="auth-name">Your name</label>
-          <input class="form-input" type="text" id="auth-name" placeholder="Pranay" autocomplete="name" />
+          <input class="form-input" type="text" id="auth-name" placeholder="Your name" autocomplete="name" />
         </div>
         <div class="form-group">
           <label class="form-label" for="auth-signup-email">Email</label>
@@ -135,12 +135,61 @@
   </div>
 
   <!-- ══════════════════════════
-       TAB: HOME (feature overview)
+       ONBOARDING SCREEN (first visit only)
+  ══════════════════════════ -->
+  <div id="onboarding-screen" class="onboarding-screen hidden">
+    <div class="onboarding-wrap">
+      <div class="onb-logo">
+        <div class="logo-icon" style="width:52px;height:52px;font-size:24px;border-radius:16px;">✚</div>
+      </div>
+      <h1 class="onb-title">Welcome to<br/><em>MediCompanion</em></h1>
+      <p class="onb-sub">Your personal medicine companion — reminders, symptom checker, and health info all in one place.</p>
+
+      <div class="onb-features">
+        <div class="onb-feat">
+          <span class="onb-feat-icon">💊</span>
+          <div>
+            <p class="onb-feat-title">Medicine reminders</p>
+            <p class="onb-feat-desc">Add medicines, set times, get notified even when the app is closed.</p>
+          </div>
+        </div>
+        <div class="onb-feat">
+          <span class="onb-feat-icon">🩺</span>
+          <div>
+            <p class="onb-feat-title">AI symptom checker</p>
+            <p class="onb-feat-desc">Search any symptom or disease. 80+ conditions work offline instantly.</p>
+          </div>
+        </div>
+        <div class="onb-feat">
+          <span class="onb-feat-icon">📴</span>
+          <div>
+            <p class="onb-feat-title">Works offline</p>
+            <p class="onb-feat-desc">No internet needed. Your data stays private on your device.</p>
+          </div>
+        </div>
+        <div class="onb-feat">
+          <span class="onb-feat-icon">☁️</span>
+          <div>
+            <p class="onb-feat-title">Sync across devices</p>
+            <p class="onb-feat-desc">Create a free account to access your medicines on any device.</p>
+          </div>
+        </div>
+      </div>
+
+      <button class="onb-cta" onclick="finishOnboarding()">
+        Get started →
+      </button>
+      <p class="onb-disclaimer">⚠ General health info only — always consult a qualified doctor for medical advice.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════
+       TAB: HOME (dashboard)
   ══════════════════════════ -->
   <section class="tab-page" id="tab-home">
     <div class="home-wrap">
 
-      <!-- Top greeting -->
+      <!-- Greeting + add button -->
       <div class="home-greeting">
         <div>
           <p class="home-hello" id="home-hello">Good morning</p>
@@ -149,7 +198,7 @@
         <button class="home-add-btn" onclick="showTab('reminders'); openModal()">+ Add Medicine</button>
       </div>
 
-      <!-- Quick stats -->
+      <!-- Stats -->
       <div class="home-stats">
         <div class="hstat-card">
           <p class="hstat-num" id="hstat-total">0</p>
@@ -165,58 +214,26 @@
         </div>
       </div>
 
-      <!-- Today's next medicine -->
+      <!-- Next medicine -->
       <div class="home-next" id="home-next"></div>
 
-      <!-- Feature cards grid -->
-      <p class="home-section-label" id="home-feat-label">What you can do</p>
-      <div class="home-feat-grid" id="home-feat-grid">
-
-        <div class="hfeat-card hfeat-dark" onclick="showTab('reminders')">
-          <div class="hfeat-tag">Reminders</div>
-          <div class="hfeat-icon">💊</div>
-          <h3 class="hfeat-title">Smart reminders</h3>
-          <p class="hfeat-desc">Add medicines, set times, get notified even when the app is closed.</p>
-          <div class="hfeat-list">
-            <span>· Colour-coded medicines</span>
-            <span>· Daily timeline view</span>
-            <span>· Mark doses with one tap</span>
-          </div>
-          <div class="hfeat-arrow">→</div>
-        </div>
-
-        <div class="hfeat-card hfeat-green" onclick="showTab('symptom')">
-          <div class="hfeat-tag">AI Powered</div>
-          <div class="hfeat-icon">🩺</div>
-          <h3 class="hfeat-title">Symptom checker</h3>
-          <p class="hfeat-desc">Search any symptom or disease. 80+ conditions available offline.</p>
-          <div class="hfeat-list">
-            <span>· Instant offline results</span>
-            <span>· AI search for rare conditions</span>
-            <span>· Guided 5-question check</span>
-          </div>
-          <div class="hfeat-arrow">→</div>
-        </div>
-
-        <div class="hfeat-card hfeat-light" onclick="showTab('reminders')">
-          <div class="hfeat-tag">Unique advantage</div>
-          <div class="hfeat-icon">📴</div>
-          <h3 class="hfeat-title">Fully offline</h3>
-          <p class="hfeat-desc">Works without internet. Your data never leaves your device.</p>
-          <div class="hfeat-list">
-            <span>· No account needed</span>
-            <span>· No data sent online</span>
-            <span>· Works on Android & iOS</span>
-          </div>
-          <div class="hfeat-arrow">→</div>
-        </div>
-
-      </div>
-
-      <!-- Onboarding dismiss -->
-      <div class="onboard-dismiss" id="onboard-dismiss" style="display:none;">
-        <button class="onboard-dismiss-btn" onclick="dismissOnboarding()">
-          Got it — don't show again ✕
+      <!-- Quick actions -->
+      <div class="home-quick">
+        <button class="quick-btn" onclick="showTab('reminders')">
+          <span class="quick-icon">🔔</span>
+          <span>Reminders</span>
+        </button>
+        <button class="quick-btn quick-btn-green" onclick="showTab('symptom'); switchMode('search')">
+          <span class="quick-icon">🔍</span>
+          <span>Search symptom</span>
+        </button>
+        <button class="quick-btn" onclick="showTab('symptom'); switchMode('guided')">
+          <span class="quick-icon">🩺</span>
+          <span>Guided check</span>
+        </button>
+        <button class="quick-btn" onclick="openModal()">
+          <span class="quick-icon">➕</span>
+          <span>Add medicine</span>
         </button>
       </div>
 

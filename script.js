@@ -353,21 +353,7 @@ function renderHome() {
   setEl('hstat-taken',   taken);
   setEl('hstat-pending', pending);
 
-  // Feature cards — first visit only
-  const featGrid  = document.getElementById('home-feat-grid');
-  const featLabel = document.getElementById('home-feat-label');
-  const dismissEl = document.getElementById('onboard-dismiss');
-  const isOnboarded = localStorage.getItem('mr_onboarded');
-  if (!isOnboarded) {
-    if (featGrid)  featGrid.style.display  = 'grid';
-    if (featLabel) featLabel.style.display = 'block';
-    if (dismissEl) dismissEl.style.display = 'flex';
-  } else {
-    if (featGrid)  featGrid.style.display  = 'none';
-    if (featLabel) featLabel.style.display = 'none';
-    if (dismissEl) dismissEl.style.display = 'none';
-  }
-  if (medicines.length > 0 && !isOnboarded) localStorage.setItem('mr_onboarded','1');
+  // Onboarding is handled separately — nothing to do here
 
   // Next medicine
   const nextEl = document.getElementById('home-next');
@@ -411,16 +397,29 @@ function renderHome() {
 }
 
 /* ══════════════════════════════════════
-   ONBOARDING DISMISS
+   ONBOARDING
 ══════════════════════════════════════ */
-function dismissOnboarding() {
-  localStorage.setItem('mr_onboarded','1');
-  ['home-feat-grid','home-feat-label','onboard-dismiss'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-  showToast('✅ Got it! Feature guide hidden.');
+function showOnboarding() {
+  const scr = document.getElementById('onboarding-screen');
+  if (scr) scr.classList.remove('hidden');
 }
+
+function finishOnboarding() {
+  localStorage.setItem('mr_onboarded', '1');
+  const scr = document.getElementById('onboarding-screen');
+  if (!scr) return;
+  // Animate out
+  scr.classList.add('leaving');
+  setTimeout(() => {
+    scr.classList.add('hidden');
+    scr.classList.remove('leaving');
+    // Go to reminders tab so user can add first medicine
+    showTab('reminders');
+  }, 350);
+}
+
+// Keep old name as alias
+function dismissOnboarding() { finishOnboarding(); }
 
 /* ══════════════════════════════════════
    MEDICINE CRUD (backend + local fallback)
@@ -785,11 +784,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   updateUserUI();
 
-  // Restore last tab
-  showTab(localStorage.getItem('mr_last_tab') || 'home');
-
   const dl = document.getElementById('date-label');
   if (dl) dl.textContent = fullDateLabel();
+
+  // First visit — show onboarding screen instead of app
+  if (!localStorage.getItem('mr_onboarded')) {
+    showOnboarding();
+  } else {
+    // Returning user — restore last tab
+    showTab(localStorage.getItem('mr_last_tab') || 'home');
+  }
 
   // If logged in, load medicines from backend
   if (isLoggedIn() && navigator.onLine) {

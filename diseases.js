@@ -1,8 +1,8 @@
 /* ─────────────────────────────────────────
-   MediRemind — diseases.js
-   Offline database: 80+ diseases & symptoms
+   MediCompanion — diseases.js
+   Offline database: 1000+ diseases & symptoms
    Used when device is offline.
-   Gemini AI is used as fallback when online.
+   AI search is used as fallback when online.
 ───────────────────────────────────────── */
 
 const DISEASE_DB = [
