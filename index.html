@@ -37,12 +37,93 @@
         </button>
       </nav>
       <div class="header-right">
-        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
-          <span id="theme-icon">☀️</span>
+        <button class="user-btn" id="user-btn" onclick="toggleUserMenu()" title="Account">
+          <span class="user-avatar" id="user-avatar">?</span>
         </button>
+        <!-- User dropdown menu -->
+        <div class="user-menu hidden" id="user-menu">
+          <div class="user-menu-info">
+            <p class="user-menu-name" id="user-menu-name">Guest</p>
+            <p class="user-menu-email" id="user-menu-email">Not signed in</p>
+          </div>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item" id="user-menu-auth-btn" onclick="handleAuthMenuClick()">Sign in / Create account</button>
+          <div class="user-menu-divider" id="user-menu-sync-div" style="display:none;"></div>
+          <button class="user-menu-item" id="user-menu-sync" style="display:none;" onclick="syncAll()">🔄 Sync medicines</button>
+          <div class="user-menu-divider"></div>
+          <button class="theme-toggle-menu" onclick="toggleTheme()">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span id="theme-label">Light mode</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
+
+  <!-- ══════════════════════════
+       AUTH MODAL (Login / Signup)
+  ══════════════════════════ -->
+  <div class="modal-overlay hidden" id="auth-modal" onclick="closeAuthOnBg(event)">
+    <div class="modal auth-modal-box" role="dialog" aria-modal="true" aria-label="Sign in">
+
+      <div class="auth-logo">
+        <div class="logo-icon">✚</div>
+        <span class="logo-text">MediCompanion</span>
+      </div>
+
+      <!-- Tab switch -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Sign in</button>
+        <button class="auth-tab" id="auth-tab-signup" onclick="switchAuthTab('signup')">Create account</button>
+      </div>
+
+      <!-- Login form -->
+      <div id="auth-login-form">
+        <div class="form-group">
+          <label class="form-label" for="auth-email">Email</label>
+          <input class="form-input" type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="auth-password">Password</label>
+          <div class="pw-wrap">
+            <input class="form-input" type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" />
+            <button class="pw-toggle" onclick="togglePw('auth-password', this)" tabindex="-1">👁</button>
+          </div>
+        </div>
+        <div class="auth-error hidden" id="auth-login-error"></div>
+        <button class="btn-primary auth-submit" id="auth-login-btn" onclick="doLogin()">
+          <span id="auth-login-text">Sign in</span>
+          <span class="auth-spinner hidden" id="auth-login-spin"></span>
+        </button>
+      </div>
+
+      <!-- Signup form -->
+      <div id="auth-signup-form" class="hidden">
+        <div class="form-group">
+          <label class="form-label" for="auth-name">Your name</label>
+          <input class="form-input" type="text" id="auth-name" placeholder="Pranay" autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="auth-signup-email">Email</label>
+          <input class="form-input" type="email" id="auth-signup-email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="auth-signup-password">Password</label>
+          <div class="pw-wrap">
+            <input class="form-input" type="password" id="auth-signup-password" placeholder="At least 6 characters" autocomplete="new-password" />
+            <button class="pw-toggle" onclick="togglePw('auth-signup-password', this)" tabindex="-1">👁</button>
+          </div>
+        </div>
+        <div class="auth-error hidden" id="auth-signup-error"></div>
+        <button class="btn-primary auth-submit" id="auth-signup-btn" onclick="doSignup()">
+          <span id="auth-signup-text">Create account</span>
+          <span class="auth-spinner hidden" id="auth-signup-spin"></span>
+        </button>
+      </div>
+
+      <p class="auth-note">Your data stays private. No spam, ever.</p>
+    </div>
+  </div>
 
   <!-- PWA install bar -->
   <div class="pwa-install-bar hidden" id="pwa-install-bar">
@@ -88,8 +169,8 @@
       <div class="home-next" id="home-next"></div>
 
       <!-- Feature cards grid -->
-      <p class="home-section-label">What you can do</p>
-      <div class="home-feat-grid">
+      <p class="home-section-label" id="home-feat-label">What you can do</p>
+      <div class="home-feat-grid" id="home-feat-grid">
 
         <div class="hfeat-card hfeat-dark" onclick="showTab('reminders')">
           <div class="hfeat-tag">Reminders</div>
@@ -130,6 +211,13 @@
           <div class="hfeat-arrow">→</div>
         </div>
 
+      </div>
+
+      <!-- Onboarding dismiss -->
+      <div class="onboard-dismiss" id="onboard-dismiss" style="display:none;">
+        <button class="onboard-dismiss-btn" onclick="dismissOnboarding()">
+          Got it — don't show again ✕
+        </button>
       </div>
 
       <p class="home-disclaimer">⚠ General health info only — always consult a qualified doctor for medical advice.</p>

@@ -720,3 +720,435 @@ body {
   .bottom-nav { display: none; } /* hide bottom nav on desktop — use top nav */
   body { padding-bottom: 0; }
 }
+
+/* ══════════════════════════════════════════
+   UI IMPROVEMENTS — Full screen + Pro toggle
+══════════════════════════════════════════ */
+
+/* ── FULL SCREEN LAYOUT ── */
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.tab-page {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 32px 40px;
+}
+
+.header-inner {
+  max-width: 1100px;
+}
+
+@media (max-width: 768px) {
+  .tab-page { padding: 16px 14px 28px; }
+}
+
+/* ── HOME PAGE full-width improvements ── */
+.home-wrap { max-width: 100%; }
+
+.home-stats {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.hstat-card { padding: 20px 24px; }
+.hstat-num  { font-size: 40px; }
+
+.home-feat-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.hfeat-card { padding: 28px 24px; }
+
+/* ── PROFESSIONAL THEME TOGGLE ── */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+
+.toggle-track {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  background: var(--bg3);
+  border: 1.5px solid var(--border2);
+  border-radius: 999px;
+  transition: background 0.25s ease, border-color 0.25s ease;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .toggle-track {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--text-3);
+  border-radius: 50%;
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+
+[data-theme="light"] .toggle-thumb {
+  transform: translateX(18px);
+  background: #fff;
+}
+
+.toggle-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+  transition: color 0.25s;
+  white-space: nowrap;
+}
+
+[data-theme="light"] .toggle-label {
+  color: var(--green);
+}
+
+/* ── SYMPTOM CHECKER full-width ── */
+.symptom-wrapper { max-width: 680px; }
+.search-wrapper  { max-width: 100%; }
+
+.disease-card { max-width: 780px; }
+
+.disease-body  { padding: 20px 28px; }
+.disease-header { padding: 24px 28px 16px; }
+
+/* ── MEDICINE LIST full-width ── */
+.medicine-list { max-width: 100%; }
+.med-item      { max-width: 100%; }
+
+/* ── STATS full-width ── */
+.stats-row { max-width: 100%; gap: 14px; }
+.stat-card { padding: 18px 20px; }
+.stat-num  { font-size: 36px; }
+
+/* ── TIMELINE full width ── */
+.timeline { max-width: 100%; }
+
+/* ── NEXT CARD full-width ── */
+.next-card { max-width: 100%; }
+
+/* ── ONBOARDING dismiss button ── */
+.onboard-dismiss {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.onboard-dismiss-btn {
+  font-size: 12px;
+  color: var(--text-3);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+}
+.onboard-dismiss-btn:hover {
+  color: var(--text-1);
+  border-color: var(--border2);
+}
+
+/* ── SUGGESTION PILLS full width wrap ── */
+.suggestion-pills {
+  gap: 8px;
+  row-gap: 8px;
+}
+
+/* ── MODAL centered properly ── */
+.modal-overlay { align-items: center; }
+
+/* ── BOTTOM NAV hide on desktop ── */
+@media (min-width: 641px) {
+  .bottom-nav { display: none; }
+  body { padding-bottom: 0; }
+}
+
+/* ── RESPONSIVE improvements ── */
+@media (max-width: 900px) {
+  .home-feat-grid { grid-template-columns: 1fr 1fr; }
+  .tab-page { padding: 20px 20px 32px; }
+}
+
+@media (max-width: 580px) {
+  .home-feat-grid { grid-template-columns: 1fr; }
+  .home-stats     { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .hstat-num      { font-size: 28px; }
+  .hstat-card     { padding: 14px 12px; }
+  .toggle-label   { display: none; }
+}
+
+/* ══════════════════════════════════════════
+   AUTH MODAL + USER MENU
+══════════════════════════════════════════ */
+
+/* Auth modal box */
+.auth-modal-box {
+  max-width: 400px;
+  padding: 0;
+}
+
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 24px 24px 0;
+  margin-bottom: 20px;
+}
+
+/* Auth tabs */
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.auth-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 11px 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+.auth-tab:hover { color: var(--text-1); }
+.auth-tab.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+  background: var(--bg2);
+}
+
+/* Auth forms */
+#auth-login-form,
+#auth-signup-form {
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Password wrapper */
+.pw-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pw-wrap .form-input {
+  width: 100%;
+  padding-right: 40px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--text-3);
+  padding: 4px;
+  line-height: 1;
+}
+.pw-toggle:hover { color: var(--text-1); }
+
+/* Auth error */
+.auth-error {
+  background: var(--red-l);
+  border: 1px solid rgba(226,75,74,0.25);
+  border-radius: var(--radius-sm);
+  padding: 9px 13px;
+  font-size: 13px;
+  color: var(--red);
+  line-height: 1.5;
+}
+
+/* Auth submit button */
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+/* Spinner inside button */
+.auth-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Auth note */
+.auth-note {
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+  padding: 16px 24px 20px;
+  line-height: 1.5;
+}
+
+/* ── USER BUTTON in header ── */
+.user-btn {
+  background: none;
+  border: 1.5px solid var(--border2);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  position: relative;
+}
+.user-btn:hover { border-color: var(--green); }
+
+.user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--green-l);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* ── USER DROPDOWN MENU ── */
+.user-menu {
+  position: absolute;
+  top: 68px;
+  right: 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  min-width: 220px;
+  z-index: 200;
+  overflow: hidden;
+  animation: popIn 0.18s ease;
+}
+
+.user-menu-info {
+  padding: 14px 16px 12px;
+}
+.user-menu-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+  margin-bottom: 2px;
+}
+.user-menu-email {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.user-menu-divider {
+  height: 1px;
+  background: var(--border);
+}
+.user-menu-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 11px 16px;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.user-menu-item:hover {
+  background: var(--bg3);
+  color: var(--text-1);
+}
+.user-menu-item.signout {
+  color: var(--red);
+}
+.user-menu-item.signout:hover {
+  background: var(--red-l);
+}
+
+/* Theme toggle inside menu */
+.theme-toggle-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 11px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.theme-toggle-menu:hover {
+  background: var(--bg3);
+  color: var(--text-1);
+}
+
+/* Sync notice banner */
+.notice-green {
+  background: var(--green-l);
+  border: 1px solid rgba(26,158,114,0.25);
+  color: var(--green);
+}
+.notice-green .notice-btn {
+  background: var(--green);
+}
+
+/* Logged in state — green dot on avatar */
+.user-btn.logged-in {
+  border-color: var(--green);
+}
+
+/* Remove old standalone theme toggle */
+.theme-toggle {
+  display: none !important;
+}
+
+@media (max-width: 580px) {
+  .user-menu {
+    right: 10px;
+    min-width: 200px;
+  }
+}
