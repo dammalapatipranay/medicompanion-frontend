@@ -613,16 +613,56 @@ async function requestNotifPermission() {
 }
 function scheduleNotification(med) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const [h,m] = med.time.split(':').map(Number);
-  const target = new Date(); target.setHours(h,m,0,0);
-  if (target <= new Date()) target.setDate(target.getDate()+1);
-  const delay = target - new Date();
-  const title  = '💊 Time for ' + med.name;
-  const body   = med.dose || 'Tap to mark as taken';
+
+  const [h, m] = med.time.split(':').map(Number);
+  const now    = new Date();
+  const target = new Date();
+  target.setHours(h, m, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+
+  const delay      = target - now;
+  const missDelay  = delay + (10 * 60 * 1000); // 10 minutes after reminder time
+
+  const title      = '💊 Time for ' + med.name;
+  const body       = med.dose ? med.dose : 'Tap to mark as taken';
+  const missTitle  = '⚠️ Missed: ' + med.name;
+  const missBody   = 'You missed your ' + med.name + '. Please take it as soon as possible.';
+
   if (window._swReg?.active) {
-    window._swReg.active.postMessage({ type:'SCHEDULE', title, body, tag:'med-'+med.id, delay });
+    // Main reminder
+    window._swReg.active.postMessage({
+      type: 'SCHEDULE', title, body,
+      tag: 'med-' + med.id, delay
+    });
+    // Missed pill reminder — scheduled 10 min later
+    window._swReg.active.postMessage({
+      type: 'SCHEDULE_MISSED',
+      title: missTitle, body: missBody,
+      tag: 'missed-' + med.id,
+      medId: med.id,
+      delay: missDelay
+    });
   } else {
-    setTimeout(() => new Notification(title, { body, icon:'./icons/icon-192.png', requireInteraction:true }), delay);
+    // Fallback: browser Notification API
+    setTimeout(() => {
+      new Notification(title, {
+        body, icon: './icons/icon-192.png', requireInteraction: true
+      });
+    }, delay);
+
+    // Missed pill fallback — fires 10 min later, checks if still not taken
+    setTimeout(() => {
+      // Re-read takenToday from localStorage at fire time (most up-to-date)
+      const taken = JSON.parse(localStorage.getItem('mr_taken_' + new Date().toISOString().slice(0,10)) || '[]');
+      if (!taken.includes(med.id)) {
+        new Notification(missTitle, {
+          body: missBody,
+          icon: './icons/icon-192.png',
+          requireInteraction: true,
+          tag: 'missed-' + med.id
+        });
+      }
+    }, missDelay);
   }
 }
 
@@ -719,20 +759,94 @@ function switchMode(mode) {
    DISEASE SEARCH (offline DB → backend AI)
 ══════════════════════════════════════ */
 let searchTimeout=null;
+
+/* ── Get similar disease names from offline DB for a partial query ── */
+function getSimilarSuggestions(query) {
+  const q = query.toLowerCase().trim();
+  if (!q || q.length < 2) return [];
+
+  const matches = [];
+  for (const d of DISEASE_DB) {
+    let matched = false;
+    // Match disease name
+    if (d.name.toLowerCase().includes(q)) {
+      matches.push({ name: d.name, emoji: d.emoji }); matched = true;
+    }
+    // Match aliases
+    if (!matched) {
+      for (const alias of d.aliases) {
+        if (alias.includes(q) || q.includes(alias.slice(0, Math.min(alias.length, q.length)))) {
+          matches.push({ name: d.name, emoji: d.emoji }); break;
+        }
+      }
+    }
+    if (matches.length >= 5) break; // max 5 suggestions
+  }
+  return matches;
+}
+
+/* ── Update suggestion pills dynamically ── */
+function updateSuggestions(val) {
+  const defaultEl  = document.getElementById('sugg-default');
+  const similarEl  = document.getElementById('sugg-similar');
+  const labelEl    = document.getElementById('sugg-label');
+
+  if (!val || val.trim().length < 2) {
+    // Show default pills
+    if (defaultEl)  defaultEl.style.display = '';
+    if (similarEl)  similarEl.style.display = 'none';
+    if (labelEl)    labelEl.textContent = 'Try:';
+    return;
+  }
+
+  const suggestions = getSimilarSuggestions(val.trim());
+
+  if (suggestions.length === 0) {
+    // No matches — hide suggestions, keep label
+    if (defaultEl) defaultEl.style.display = 'none';
+    if (similarEl) similarEl.style.display = 'none';
+    if (labelEl)   labelEl.textContent = 'No similar results in offline database';
+    return;
+  }
+
+  // Show similar matches
+  if (defaultEl) defaultEl.style.display = 'none';
+  if (labelEl)   labelEl.textContent = 'Similar:';
+  if (similarEl) {
+    similarEl.style.display = '';
+    similarEl.innerHTML = suggestions
+      .map(s => `<button class="sugg-pill sugg-pill-similar" onclick="searchFor('${escapeHtml(s.name.toLowerCase())}')">${s.emoji} ${escapeHtml(s.name)}</button>`)
+      .join('');
+  }
+}
+
 function onSymptomSearch(val) {
-  const clr=document.getElementById('search-clear');
-  if(clr)clr.style.display=val?'flex':'none';
+  const clr = document.getElementById('search-clear');
+  if (clr) clr.style.display = val ? 'flex' : 'none';
+
+  // Update suggestions immediately (no delay — instant feedback)
+  updateSuggestions(val);
+
   clearTimeout(searchTimeout);
-  if(!val.trim()){const a=document.getElementById('search-result-area');if(a)a.innerHTML='';return;}
-  searchTimeout=setTimeout(()=>askAI(val.trim()),500);
+  if (!val.trim()) {
+    const a = document.getElementById('search-result-area');
+    if (a) a.innerHTML = '';
+    return;
+  }
+  searchTimeout = setTimeout(() => askAI(val.trim()), 600);
 }
 function searchFor(term){
   const inp=document.getElementById('symptom-search-input');const clr=document.getElementById('search-clear');
   if(inp)inp.value=term;if(clr)clr.style.display='flex';askAI(term);
 }
 function clearSearch(){
-  const inp=document.getElementById('symptom-search-input');const clr=document.getElementById('search-clear');const a=document.getElementById('search-result-area');
-  if(inp)inp.value='';if(clr)clr.style.display='none';if(a)a.innerHTML='';
+  const inp = document.getElementById('symptom-search-input');
+  const clr = document.getElementById('search-clear');
+  const a   = document.getElementById('search-result-area');
+  if (inp) inp.value = '';
+  if (clr) clr.style.display = 'none';
+  if (a)   a.innerHTML = '';
+  updateSuggestions(''); // Reset to default pills
 }
 async function askAI(query) {
   const area=document.getElementById('search-result-area');if(!area)return;
@@ -761,6 +875,21 @@ function renderAICard(d,area,isAI=false){
   const urg={low:{cls:'urgency-low',icon:'✅',text:'Low urgency — manageable at home'},medium:{cls:'urgency-medium',icon:'⚠️',text:'Moderate urgency — monitor closely'},high:{cls:'urgency-high',icon:'🏥',text:'High urgency — see a doctor soon'}}[d.urgency]||{cls:'urgency-medium',icon:'⚠️',text:'Monitor and consult if worsening'};
   area.innerHTML=`<div class="disease-card"><div class="disease-header"><span class="disease-emoji">${d.emoji||'🩺'}</span><div><p class="disease-name">${escapeHtml(d.name)}</p><span class="disease-type type-${d.type}">${typeLabel}</span>${isAI?'<span class="ai-badge">✨ AI</span>':'<span class="offline-badge">📦 Offline</span>'}</div></div><div class="disease-body"><p class="disease-desc">${escapeHtml(d.description)}</p><p class="disease-section-title">Symptoms</p><div class="tag-list">${(d.symptoms||[]).map(s=>`<span class="tag">${escapeHtml(s)}</span>`).join('')}</div><p class="disease-section-title">Causes</p><div class="tag-list">${(d.causes||[]).map(c=>`<span class="tag">${escapeHtml(c)}</span>`).join('')}</div><p class="disease-section-title">Home care</p><p class="disease-desc">${(d.homecare||[]).map(h=>'• '+h).join('<br>')}</p><p class="disease-section-title">When to see a doctor</p><p class="disease-desc">${escapeHtml(d.whenToSeeDoctor)}</p><div class="urgency-box ${urg.cls}">${urg.icon} ${urg.text}</div><p style="font-size:11px;color:var(--text-3);margin-top:12px;text-align:center;">⚠ ${escapeHtml(d.disclaimer||'General info only.')}</p></div></div>`;
 }
+
+/* ══════════════════════════════════════
+   SERVICE WORKER MESSAGE LISTENER
+   SW asks page if a medicine was taken
+   (used for missed-pill check)
+══════════════════════════════════════ */
+navigator.serviceWorker?.addEventListener('message', e => {
+  if (e.data?.type === 'CHECK_TAKEN') {
+    const { medId } = e.data;
+    const today  = new Date().toISOString().slice(0, 10);
+    const taken  = JSON.parse(localStorage.getItem('mr_taken_' + today) || '[]');
+    // Reply back to SW via the MessageChannel port
+    e.ports?.[0]?.postMessage({ taken: taken.includes(medId) });
+  }
+});
 
 /* ══════════════════════════════════════
    PWA INSTALL

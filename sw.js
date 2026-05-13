@@ -5,7 +5,7 @@
    - Notification action buttons (taken / snooze)
 ───────────────────────────────────────── */
 
-const CACHE_NAME = 'medicompanion-v1';
+const CACHE_NAME = 'medicompanion-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -62,23 +62,67 @@ self.addEventListener('fetch', e => {
   );
 });
 
-/* ── MESSAGE: schedule a notification after a delay ── */
+/* ── MESSAGE: schedule notifications ── */
 self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SCHEDULE') {
+  if (!e.data) return;
+
+  /* Regular reminder */
+  if (e.data.type === 'SCHEDULE') {
     const { title, body, tag, delay, medId } = e.data;
     setTimeout(() => {
       self.registration.showNotification(title, {
         body,
-        icon: './icons/icon-192.png',
-        badge: './icons/icon-192.png',
+        icon:             './icons/icon-192.png',
+        badge:            './icons/icon-192.png',
         tag,
         requireInteraction: true,
-        data: { medId },
+        data:             { medId },
         actions: [
           { action: 'taken', title: '✓ Mark taken' },
           { action: 'snooze', title: '⏰ Snooze 10 min' }
         ]
       });
+    }, delay);
+  }
+
+  /* Missed pill reminder — fires 10 min after reminder, only if not taken */
+  if (e.data.type === 'SCHEDULE_MISSED') {
+    const { title, body, tag, medId, delay } = e.data;
+    setTimeout(async () => {
+      // Check localStorage via all open clients to see if medicine was taken
+      const clients = await self.clients.matchAll({ type: 'window' });
+
+      // Ask the first available client if this medicine was taken today
+      let isTaken = false;
+      if (clients.length > 0) {
+        try {
+          const response = await new Promise((resolve, reject) => {
+            const channel = new MessageChannel();
+            channel.port1.onmessage = (ev) => resolve(ev.data);
+            clients[0].postMessage({ type: 'CHECK_TAKEN', medId }, [channel.port2]);
+            setTimeout(() => reject('timeout'), 2000);
+          });
+          isTaken = response?.taken === true;
+        } catch (_) {
+          // If no response, assume not taken (safer — show reminder)
+          isTaken = false;
+        }
+      }
+
+      // Only show missed reminder if medicine was NOT taken
+      if (!isTaken) {
+        self.registration.showNotification(title, {
+          body,
+          icon:             './icons/icon-192.png',
+          badge:            './icons/icon-192.png',
+          tag,
+          requireInteraction: true,
+          data:             { medId, isMissed: true },
+          actions: [
+            { action: 'taken', title: '✓ Take now' }
+          ]
+        });
+      }
     }, delay);
   }
 });

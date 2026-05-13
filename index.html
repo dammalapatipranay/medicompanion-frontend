@@ -332,16 +332,19 @@
             oninput="onSymptomSearch(this.value)" />
           <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none">✕</button>
         </div>
-        <div class="suggestion-pills">
-          <span class="pill-label">Try:</span>
-          <button class="sugg-pill" onclick="searchFor('fever')">🌡️ Fever</button>
-          <button class="sugg-pill" onclick="searchFor('allergy')">🌿 Allergy</button>
-          <button class="sugg-pill" onclick="searchFor('diabetes')">🩸 Diabetes</button>
-          <button class="sugg-pill" onclick="searchFor('migraine')">🧠 Migraine</button>
-          <button class="sugg-pill" onclick="searchFor('cold')">🤧 Cold</button>
-          <button class="sugg-pill" onclick="searchFor('hypertension')">❤️ BP</button>
-          <button class="sugg-pill" onclick="searchFor('dengue')">🦟 Dengue</button>
-          <button class="sugg-pill" onclick="searchFor('anxiety')">😰 Anxiety</button>
+        <div class="suggestion-pills" id="suggestion-pills">
+          <span class="pill-label" id="sugg-label">Try:</span>
+          <span id="sugg-default">
+            <button class="sugg-pill" onclick="searchFor('fever')">🌡️ Fever</button>
+            <button class="sugg-pill" onclick="searchFor('allergy')">🌿 Allergy</button>
+            <button class="sugg-pill" onclick="searchFor('diabetes')">🩸 Diabetes</button>
+            <button class="sugg-pill" onclick="searchFor('migraine')">🧠 Migraine</button>
+            <button class="sugg-pill" onclick="searchFor('cold')">🤧 Cold</button>
+            <button class="sugg-pill" onclick="searchFor('hypertension')">❤️ BP</button>
+            <button class="sugg-pill" onclick="searchFor('dengue')">🦟 Dengue</button>
+            <button class="sugg-pill" onclick="searchFor('anxiety')">😰 Anxiety</button>
+          </span>
+          <span id="sugg-similar" style="display:none;"></span>
         </div>
         <div id="search-result-area"></div>
       </div>

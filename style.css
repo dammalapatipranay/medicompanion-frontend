@@ -1312,13 +1312,14 @@ html, body {
   transform: translateY(-2px);
 }
 .quick-btn-green {
-  background: var(--green-l);
-  border-color: rgba(26,158,114,0.25);
-  color: var(--green);
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-2);
 }
 .quick-btn-green:hover {
-  background: rgba(26,158,114,0.2);
-  color: var(--green-d);
+  background: var(--green-l);
+  border-color: rgba(26,158,114,0.3);
+  color: var(--green);
 }
 .quick-icon { font-size: 22px; }
 
@@ -1335,4 +1336,25 @@ html, body {
 }
 .onboarding-screen.leaving {
   animation: slideOut 0.35s ease forwards;
+}
+
+/* ── SIMILAR SUGGESTIONS pills ── */
+.sugg-pill-similar {
+  background: var(--green-l);
+  border-color: rgba(26,158,114,0.25);
+  color: var(--green);
+  font-weight: 500;
+}
+.sugg-pill-similar:hover {
+  background: rgba(26,158,114,0.2);
+  border-color: var(--green);
+  color: var(--green-d);
+}
+
+#sugg-label {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-right: 4px;
+  white-space: nowrap;
+  transition: color 0.2s;
 }
