@@ -424,17 +424,105 @@ function dismissOnboarding() { finishOnboarding(); }
 /* ══════════════════════════════════════
    MEDICINE CRUD (backend + local fallback)
 ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   CUSTOM TIME PICKER
+══════════════════════════════════════ */
+let _ampm = 'AM';
+
+function spinTime(field, dir) {
+  const el = document.getElementById('med-' + field);
+  if (!el) return;
+  let val = parseInt(el.value) || 0;
+  if (field === 'hour') {
+    val += dir;
+    if (val > 12) val = 1;
+    if (val < 1)  val = 12;
+  } else {
+    val += dir;
+    if (val > 59) val = 0;
+    if (val < 0)  val = 59;
+  }
+  el.value = field === 'min' ? String(val).padStart(2,'0') : val;
+  updateHiddenTime();
+}
+
+function setAmPm(val) {
+  _ampm = val;
+  document.getElementById('ampm-am').classList.toggle('active', val === 'AM');
+  document.getElementById('ampm-pm').classList.toggle('active', val === 'PM');
+  updateHiddenTime();
+}
+
+function updateHiddenTime() {
+  const hourEl = document.getElementById('med-hour');
+  const minEl  = document.getElementById('med-min');
+  const hidden = document.getElementById('med-time');
+  if (!hourEl || !minEl || !hidden) return;
+
+  let h = parseInt(hourEl.value) || 12;
+  const m = parseInt(minEl.value) || 0;
+
+  // Convert 12h → 24h for storage
+  if (_ampm === 'AM') {
+    if (h === 12) h = 0;
+  } else {
+    if (h !== 12) h += 12;
+  }
+  hidden.value = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+function initTimePicker() {
+  // Pre-fill with current time
+  const now  = new Date();
+  let h      = now.getHours();
+  const m    = now.getMinutes();
+  _ampm      = h >= 12 ? 'PM' : 'AM';
+  h          = h % 12 || 12;
+
+  const hourEl = document.getElementById('med-hour');
+  const minEl  = document.getElementById('med-min');
+  if (hourEl) hourEl.value = h;
+  if (minEl)  minEl.value  = String(m).padStart(2,'0');
+  setAmPm(_ampm);
+  updateHiddenTime();
+
+  // Allow mouse wheel scrolling on inputs
+  ['med-hour','med-min'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('wheel', ev => {
+      ev.preventDefault();
+      spinTime(id === 'med-hour' ? 'hour' : 'min', ev.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
+    el.addEventListener('input', updateHiddenTime);
+    el.addEventListener('change', () => {
+      const field = id === 'med-hour' ? 'hour' : 'min';
+      let val = parseInt(el.value) || 0;
+      if (field === 'hour') { if(val<1)val=1; if(val>12)val=12; }
+      else                  { if(val<0)val=0; if(val>59)val=59; }
+      el.value = field === 'min' ? String(val).padStart(2,'0') : val;
+      updateHiddenTime();
+    });
+  });
+}
+
 function openModal() {
   selectedColor = 'green';
   document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
   const gd = document.querySelector('.color-dot[data-color="green"]');
   if (gd) gd.classList.add('selected');
   document.getElementById('modal-overlay').classList.remove('hidden');
+  initTimePicker();
   setTimeout(() => document.getElementById('med-name').focus(), 100);
 }
 function closeModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
-  ['med-name','med-dose','med-time'].forEach(id => document.getElementById(id).value = '');
+  ['med-name','med-dose'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const hiddenTime = document.getElementById('med-time');
+  if (hiddenTime) hiddenTime.value = '';
   document.getElementById('med-freq').value = 'Daily';
 }
 function closeModalOnBg(e) { if (e.target.id === 'modal-overlay') closeModal(); }
@@ -878,18 +966,70 @@ function renderAICard(d,area,isAI=false){
 
 /* ══════════════════════════════════════
    SERVICE WORKER MESSAGE LISTENER
-   SW asks page if a medicine was taken
-   (used for missed-pill check)
+   Handles CHECK_TAKEN and MARK_TAKEN
+   messages from the service worker
 ══════════════════════════════════════ */
-navigator.serviceWorker?.addEventListener('message', e => {
-  if (e.data?.type === 'CHECK_TAKEN') {
+navigator.serviceWorker?.addEventListener('message', async e => {
+  if (!e.data) return;
+
+  /* SW asks: was this medicine taken today? */
+  if (e.data.type === 'CHECK_TAKEN') {
+    const today = todayKey();
+    const taken = JSON.parse(localStorage.getItem('mr_taken_' + today) || '[]');
+    e.ports?.[0]?.postMessage({ taken: taken.includes(e.data.medId) });
+  }
+
+  /* SW says: mark this medicine as taken (user tapped action button) */
+  if (e.data.type === 'MARK_TAKEN') {
     const { medId } = e.data;
-    const today  = new Date().toISOString().slice(0, 10);
-    const taken  = JSON.parse(localStorage.getItem('mr_taken_' + today) || '[]');
-    // Reply back to SW via the MessageChannel port
-    e.ports?.[0]?.postMessage({ taken: taken.includes(medId) });
+    if (!takenToday.includes(medId)) {
+      takenToday.push(medId);
+      saveTakenLocal();
+      // Also sync to backend if logged in
+      if (isLoggedIn()) {
+        try {
+          await fetch(`${API_URL}/api/medicines/taken/${medId}`, {
+            method: 'POST', headers: authHeaders()
+          });
+        } catch(_) {}
+      }
+      renderMedicines();
+      renderHome();
+    }
   }
 });
+
+/* Process any pending offline actions stored by SW when app was closed */
+async function processPendingActions() {
+  try {
+    const db = await new Promise((resolve, reject) => {
+      const req = indexedDB.open('mc_pending', 1);
+      req.onupgradeneeded = ev => ev.target.result.createObjectStore('actions', { autoIncrement: true });
+      req.onsuccess  = ev => resolve(ev.target.result);
+      req.onerror    = () => reject();
+    });
+    const tx      = db.transaction('actions', 'readwrite');
+    const store   = tx.objectStore('actions');
+    const allKeys = await new Promise(r => { const req = store.getAllKeys(); req.onsuccess = () => r(req.result); });
+    const allVals = await new Promise(r => { const req = store.getAll();    req.onsuccess = () => r(req.result); });
+
+    for (let i = 0; i < allVals.length; i++) {
+      const { action, medId, date } = allVals[i];
+      if (action === 'MARK_TAKEN' && date === todayKey()) {
+        if (!takenToday.includes(medId)) {
+          takenToday.push(medId);
+          saveTakenLocal();
+          if (isLoggedIn()) {
+            try { await fetch(`${API_URL}/api/medicines/taken/${medId}`, { method:'POST', headers: authHeaders() }); } catch(_) {}
+          }
+        }
+      }
+      // Delete processed action
+      store.delete(allKeys[i]);
+    }
+    if (allVals.length > 0) { renderMedicines(); renderHome(); }
+  } catch(_) {}
+}
 
 /* ══════════════════════════════════════
    PWA INSTALL
@@ -930,6 +1070,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderMedicines(); renderHome();
   }
 
+  processPendingActions();
   checkNotifPermission();
 
   if ('serviceWorker' in navigator && Notification.permission === 'granted') {

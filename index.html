@@ -22,7 +22,7 @@
   <header class="header">
     <div class="header-inner">
       <div class="logo">
-        <div class="logo-icon">✚</div>
+        <img src="icons/icon-192.png" class="logo-icon-img" alt="MediCompanion" />
         <span class="logo-text">MediCompanion</span>
       </div>
       <nav class="nav" id="main-nav">
@@ -67,7 +67,7 @@
     <div class="modal auth-modal-box" role="dialog" aria-modal="true" aria-label="Sign in">
 
       <div class="auth-logo">
-        <div class="logo-icon">✚</div>
+        <img src="icons/icon-192.png" class="logo-icon-img" alt="MediCompanion" />
         <span class="logo-text">MediCompanion</span>
       </div>
 
@@ -140,7 +140,7 @@
   <div id="onboarding-screen" class="onboarding-screen hidden">
     <div class="onboarding-wrap">
       <div class="onb-logo">
-        <div class="logo-icon" style="width:52px;height:52px;font-size:24px;border-radius:16px;">✚</div>
+        <img src="icons/icon-192.png" class="onb-logo-img" alt="MediCompanion" />
       </div>
       <h1 class="onb-title">Welcome to<br/><em>MediCompanion</em></h1>
       <p class="onb-sub">Your personal medicine companion — reminders, symptom checker, and health info all in one place.</p>
@@ -386,8 +386,25 @@
           <input class="form-input" type="text" id="med-dose" placeholder="e.g. 1 tablet after food" />
         </div>
         <div class="form-group">
-          <label class="form-label" for="med-time">Reminder time *</label>
-          <input class="form-input" type="time" id="med-time" />
+          <label class="form-label" for="med-hour">Reminder time *</label>
+          <div class="time-picker-wrap">
+            <div class="time-spinner-group">
+              <button class="time-spin-btn" onclick="spinTime('hour', 1)" type="button">▲</button>
+              <input class="time-spin-input" type="number" id="med-hour" min="1" max="12" value="8" inputmode="numeric" />
+              <button class="time-spin-btn" onclick="spinTime('hour', -1)" type="button">▼</button>
+            </div>
+            <span class="time-colon">:</span>
+            <div class="time-spinner-group">
+              <button class="time-spin-btn" onclick="spinTime('min', 1)" type="button">▲</button>
+              <input class="time-spin-input" type="number" id="med-min" min="0" max="59" value="0" inputmode="numeric" />
+              <button class="time-spin-btn" onclick="spinTime('min', -1)" type="button">▼</button>
+            </div>
+            <div class="time-ampm-group">
+              <button class="time-ampm-btn active" id="ampm-am" onclick="setAmPm('AM')" type="button">AM</button>
+              <button class="time-ampm-btn" id="ampm-pm" onclick="setAmPm('PM')" type="button">PM</button>
+            </div>
+          </div>
+          <input type="hidden" id="med-time" />
         </div>
         <div class="form-group">
           <label class="form-label">Frequency</label>
