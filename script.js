@@ -685,26 +685,69 @@ function renderMedicines() {
 ══════════════════════════════════════ */
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  try { window._swReg = await navigator.serviceWorker.register('./sw.js'); }
-  catch(e) { console.warn('SW:', e.message); }
-}
-function checkNotifPermission() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    const b = document.getElementById('notif-banner');
-    if (b) b.style.display = 'flex';
+  try {
+    // Unregister old SW versions first to ensure fresh install
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) {
+      if (!reg.active?.scriptURL?.includes('sw.js')) await reg.unregister();
+    }
+    window._swReg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+    // Wait for SW to be active
+    if (window._swReg.installing) {
+      await new Promise(resolve => {
+        window._swReg.installing.addEventListener('statechange', e => {
+          if (e.target.state === 'activated') resolve();
+        });
+      });
+    }
+    console.log('SW registered and active');
+  } catch(e) {
+    console.warn('SW registration failed:', e.message);
   }
 }
+
+function checkNotifPermission() {
+  if (!('Notification' in window)) return;
+  const b = document.getElementById('notif-banner');
+  if (Notification.permission === 'default') {
+    if (b) b.style.display = 'flex';
+  } else if (Notification.permission === 'denied') {
+    if (b) {
+      b.style.display = 'flex';
+      b.innerHTML = '<span>⚠️ Notifications are blocked. Enable them in browser settings.</span>';
+    }
+  } else {
+    // Already granted — hide banner
+    if (b) b.style.display = 'none';
+  }
+}
+
 async function requestNotifPermission() {
+  if (!('Notification' in window)) {
+    showToast('❌ Notifications not supported on this browser.');
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    showToast('❌ Notifications blocked. Go to browser Settings → Site Settings → Notifications → Allow.');
+    return;
+  }
   const perm = await Notification.requestPermission();
   const b = document.getElementById('notif-banner');
   if (b) b.style.display = 'none';
   if (perm === 'granted') {
     await registerServiceWorker();
     showToast('🔔 Notifications enabled!');
+    // Reschedule all medicines
     medicines.forEach(scheduleNotification);
+    // Test notification so user knows it works
+    setTimeout(() => {
+      new Notification('✅ MediCompanion notifications active!', {
+        body: 'You will now receive medicine reminders on time.',
+        icon: './icons/icon-192.png',
+      });
+    }, 1000);
   } else {
-    showToast('Notifications blocked — enable in browser settings.');
+    showToast('Notifications were not allowed. You can enable them in browser settings.');
   }
 }
 function scheduleNotification(med) {
@@ -715,8 +758,11 @@ function scheduleNotification(med) {
   const target = new Date();
   target.setHours(h, m, 0, 0);
   if (target <= now) target.setDate(target.getDate() + 1);
+  const delay = target - now;
 
-  const delay      = target - now;
+  // Don't schedule if more than 24 hours away (will be rescheduled on next open)
+  if (delay > 24 * 60 * 60 * 1000) return;
+
   const missDelay  = delay + (10 * 60 * 1000); // 10 minutes after reminder time
 
   const title      = '💊 Time for ' + med.name;
@@ -1152,8 +1198,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   processPendingActions();
   checkNotifPermission();
 
-  if ('serviceWorker' in navigator && Notification.permission === 'granted') {
-    await registerServiceWorker();
-    medicines.forEach(scheduleNotification);
+  // Register SW and schedule notifications if permission already granted
+  if ('serviceWorker' in navigator) {
+    if (Notification.permission === 'granted') {
+      await registerServiceWorker();
+      medicines.forEach(scheduleNotification);
+    } else {
+      // Still register SW for offline caching even without notification permission
+      registerServiceWorker().catch(() => {});
+    }
   }
 });
