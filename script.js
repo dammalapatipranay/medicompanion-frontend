@@ -30,6 +30,14 @@ let userMenuOpen  = false;
 function todayKey() { return new Date().toISOString().slice(0, 10); }
 function saveMedsLocal()  { localStorage.setItem('mr_meds',  JSON.stringify(medicines)); }
 function saveTakenLocal() { localStorage.setItem('mr_taken_' + todayKey(), JSON.stringify(takenToday)); }
+
+/* Clean up stale taken IDs that no longer match any medicine */
+function cleanTakenList() {
+  const validIds = new Set(medicines.map(m => m.id));
+  const before   = takenToday.length;
+  takenToday     = takenToday.filter(id => validIds.has(id));
+  if (takenToday.length !== before) saveTakenLocal();
+}
 function saveUser(user, token) {
   currentUser = user; authToken = token;
   localStorage.setItem('mr_user',  JSON.stringify(user));
@@ -848,41 +856,112 @@ function switchMode(mode) {
 ══════════════════════════════════════ */
 let searchTimeout=null;
 
-/* ── Get similar disease names from offline DB for a partial query ── */
+/* ── Fuzzy similarity score between two strings ── */
+function fuzzyScore(str, query) {
+  const s = str.toLowerCase();
+  const q = query.toLowerCase();
+  if (s === q)           return 100;
+  if (s.startsWith(q))   return 90;
+  if (s.includes(q))     return 80;
+
+  // Partial character overlap score
+  let overlap = 0;
+  for (let i = 0; i < q.length; i++) {
+    if (s.includes(q[i])) overlap++;
+  }
+  const overlapScore = Math.round((overlap / q.length) * 60);
+
+  // Edit distance (Levenshtein) — handles typos like "dibeates" → "diabetes"
+  const dp = Array.from({ length: q.length + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= s.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= q.length; i++) {
+    for (let j = 1; j <= s.length; j++) {
+      dp[i][j] = q[i-1] === s[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  const editDist  = dp[q.length][Math.min(s.length, q.length + 3)];
+  const editScore = Math.max(0, 70 - editDist * 15);
+
+  return Math.max(overlapScore, editScore);
+}
+
+/* ── Get similar disease names from offline DB ── */
 function getSimilarSuggestions(query) {
   const q = query.toLowerCase().trim();
   if (!q || q.length < 2) return [];
 
-  const matches = [];
+  const scored = [];
+
   for (const d of DISEASE_DB) {
-    let matched = false;
-    // Match disease name
-    if (d.name.toLowerCase().includes(q)) {
-      matches.push({ name: d.name, emoji: d.emoji }); matched = true;
+    let best = 0;
+
+    // Score against disease name and all its words
+    best = Math.max(best, fuzzyScore(d.name, q));
+    d.name.toLowerCase().split(/[\s,&]+/).forEach(word => {
+      if (word.length >= 2) best = Math.max(best, fuzzyScore(word, q));
+    });
+
+    // Score against all aliases
+    for (const alias of (d.aliases || [])) {
+      best = Math.max(best, fuzzyScore(alias, q));
+      alias.split(/[\s,&]+/).forEach(word => {
+        if (word.length >= 2) best = Math.max(best, fuzzyScore(word, q));
+      });
     }
-    // Match aliases
-    if (!matched) {
-      for (const alias of d.aliases) {
-        if (alias.includes(q) || q.includes(alias.slice(0, Math.min(alias.length, q.length)))) {
-          matches.push({ name: d.name, emoji: d.emoji }); break;
-        }
-      }
-    }
-    if (matches.length >= 5) break; // max 5 suggestions
+
+    if (best >= 35) scored.push({ name: d.name, emoji: d.emoji, score: best });
   }
-  return matches;
+
+  // Sort by score descending, return top 5
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(({ name, emoji }) => ({ name, emoji }));
 }
 
-/* ── Update suggestion pills dynamically ── */
+/* ── Better offline DB search using fuzzy scoring ── */
+function searchOfflineDB(query) {
+  const q = query.toLowerCase().trim();
+  if (!q || q.length < 2) return null;
+
+  let best = null;
+  let bestScore = 0;
+
+  for (const d of DISEASE_DB) {
+    let score = 0;
+
+    // Exact match wins immediately
+    if (d.name.toLowerCase() === q) return d;
+
+    score = Math.max(score, fuzzyScore(d.name, q));
+    d.name.toLowerCase().split(/[\s,]+/).forEach(w => {
+      if (w.length >= 2) score = Math.max(score, fuzzyScore(w, q));
+    });
+    for (const alias of (d.aliases || [])) {
+      score = Math.max(score, fuzzyScore(alias, q));
+      alias.split(/[\s,]+/).forEach(w => {
+        if (w.length >= 2) score = Math.max(score, fuzzyScore(w, q));
+      });
+    }
+
+    if (score > bestScore) { bestScore = score; best = d; }
+  }
+
+  // Only return if confident enough
+  return bestScore >= 55 ? best : null;
+}
+
+/* ── Update suggestion pills dynamically using fuzzy matching ── */
 function updateSuggestions(val) {
-  const defaultEl  = document.getElementById('sugg-default');
-  const similarEl  = document.getElementById('sugg-similar');
-  const labelEl    = document.getElementById('sugg-label');
+  const defaultEl = document.getElementById('sugg-default');
+  const similarEl = document.getElementById('sugg-similar');
+  const labelEl   = document.getElementById('sugg-label');
 
   if (!val || val.trim().length < 2) {
-    // Show default pills
     if (defaultEl)  defaultEl.style.display = '';
-    if (similarEl)  similarEl.style.display = 'none';
+    if (similarEl) { similarEl.style.display = 'none'; similarEl.innerHTML = ''; }
     if (labelEl)    labelEl.textContent = 'Try:';
     return;
   }
@@ -890,20 +969,19 @@ function updateSuggestions(val) {
   const suggestions = getSimilarSuggestions(val.trim());
 
   if (suggestions.length === 0) {
-    // No matches — hide suggestions, keep label
     if (defaultEl) defaultEl.style.display = 'none';
-    if (similarEl) similarEl.style.display = 'none';
-    if (labelEl)   labelEl.textContent = 'No similar results in offline database';
+    if (similarEl) { similarEl.style.display = 'none'; similarEl.innerHTML = ''; }
+    if (labelEl)   labelEl.textContent = 'Try:';
     return;
   }
 
-  // Show similar matches
+  // Show fuzzy-matched similar pills
   if (defaultEl) defaultEl.style.display = 'none';
   if (labelEl)   labelEl.textContent = 'Similar:';
   if (similarEl) {
     similarEl.style.display = '';
     similarEl.innerHTML = suggestions
-      .map(s => `<button class="sugg-pill sugg-pill-similar" onclick="searchFor('${escapeHtml(s.name.toLowerCase())}')">${s.emoji} ${escapeHtml(s.name)}</button>`)
+      .map(s => `<button class="sugg-pill sugg-pill-similar" onclick="searchFor('${s.name.toLowerCase().replace(/'/g, "\'")}')">${s.emoji} ${escapeHtml(s.name)}</button>`)
       .join('');
   }
 }
@@ -1067,8 +1145,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // If logged in, load medicines from backend
   if (isLoggedIn() && navigator.onLine) {
     await loadMedicinesFromBackend();
-    renderMedicines(); renderHome();
   }
+  cleanTakenList();
+  renderMedicines(); renderHome();
 
   processPendingActions();
   checkNotifPermission();
