@@ -1017,6 +1017,54 @@ html, body {
   line-height: 1.5;
 }
 
+/* ── Google Sign-In button ── */
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  width: 100%;
+  padding: .72rem 1rem;
+  background: var(--bg-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-size: .92rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
+  margin: .25rem 0;
+}
+.btn-google:hover {
+  background: var(--bg-3);
+  border-color: var(--green);
+  transform: translateY(-1px);
+}
+.btn-google:active { transform: translateY(0); }
+.btn-google:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.google-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ── Or divider ── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: .5rem 0;
+  color: var(--text-3);
+  font-size: .78rem;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 /* ── USER BUTTON in header ── */
 .user-btn {
   background: none;

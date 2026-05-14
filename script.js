@@ -10,6 +10,12 @@ const API_URL = (location.hostname === 'localhost' || location.hostname === '127
   ? 'http://localhost:3000'
   : 'https://medicompanion-backend.vercel.app';
 
+// Supabase public config — used ONLY for Google OAuth redirect (anon key is safe here)
+const SUPABASE_URL = 'https://cqsjcieczmwrxhxpznye.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxc2pjaWVjem13cnhoeHB6bnllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MjA4NDcsImV4cCI6MjA5Mzk5Njg0N30.MZ82lg1Kg-CDqb_JQd-v3YcTsABIbwFpCxqEbvAZsig';
+// NOTE: Replace SUPABASE_ANON_KEY with your real anon key from:
+// Supabase Dashboard → Settings → API → anon/public key
+
 /* ══════════════════════════════════════
    STATE
 ══════════════════════════════════════ */
@@ -30,14 +36,6 @@ let userMenuOpen  = false;
 function todayKey() { return new Date().toISOString().slice(0, 10); }
 function saveMedsLocal()  { localStorage.setItem('mr_meds',  JSON.stringify(medicines)); }
 function saveTakenLocal() { localStorage.setItem('mr_taken_' + todayKey(), JSON.stringify(takenToday)); }
-
-/* Clean up stale taken IDs that no longer match any medicine */
-function cleanTakenList() {
-  const validIds = new Set(medicines.map(m => m.id));
-  const before   = takenToday.length;
-  takenToday     = takenToday.filter(id => validIds.has(id));
-  if (takenToday.length !== before) saveTakenLocal();
-}
 function saveUser(user, token) {
   currentUser = user; authToken = token;
   localStorage.setItem('mr_user',  JSON.stringify(user));
@@ -294,6 +292,75 @@ async function doLogout() {
   updateUserUI();
   showToast('Signed out. Your data is still saved locally.');
   renderHome(); renderMedicines();
+}
+
+/* ── GOOGLE SIGN-IN ─────────────────────────────────────────────────────── */
+async function doGoogleSignIn() {
+  const btn = document.getElementById('google-signin-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Redirecting to Google…'; }
+
+  try {
+    // Use Supabase JS SDK to trigger Google OAuth (redirects the page)
+    const { supabase: sb } = window.supabase
+      ? { supabase: window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) }
+      : {};
+
+    if (!sb) {
+      // Fallback: Supabase SDK not loaded — call backend to get OAuth URL
+      const resp = await fetch(`${API_URL}/api/auth/google`);
+      const data = await resp.json();
+      if (data.url) { window.location.href = data.url; return; }
+      throw new Error('Could not start Google sign-in');
+    }
+
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { data, error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: { access_type: 'offline', prompt: 'consent' }
+      }
+    });
+    if (error) throw error;
+    // Supabase SDK handles the redirect automatically
+  } catch (err) {
+    console.error('Google sign-in error:', err);
+    showAuthError('auth-login-error', 'Google sign-in failed. Please try email/password.');
+    showAuthError('auth-signup-error', 'Google sign-in failed. Please try email/password.');
+    if (btn) { btn.disabled = false; btn.innerHTML = `<svg class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continue with Google`; }
+  }
+}
+
+/* ── PICKUP GOOGLE SESSION after OAuth redirect ──────────────────────────── */
+async function pickupGoogleSession() {
+  // After Google redirect, Supabase puts the token in the URL hash
+  const hash = window.location.hash;
+  if (!hash.includes('access_token')) return;
+
+  try {
+    const params = new URLSearchParams(hash.slice(1));
+    const accessToken  = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if (!accessToken) return;
+
+    // Clean the URL immediately so refreshing doesn't re-process the hash
+    history.replaceState(null, '', window.location.pathname);
+
+    // Get user info from our backend using the token
+    const resp = await fetch(`${API_URL}/api/auth/me`, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!resp.ok) throw new Error('Failed to get user info');
+    const user = await resp.json();
+
+    saveUser(user, accessToken);
+    updateUserUI();
+    showToast(`🎉 Welcome, ${user.name || user.email}!`);
+    await loadMedicinesFromBackend();
+    renderHome(); renderMedicines();
+  } catch (err) {
+    console.warn('Google session pickup failed:', err.message);
+  }
 }
 
 /* ══════════════════════════════════════
@@ -685,69 +752,26 @@ function renderMedicines() {
 ══════════════════════════════════════ */
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  try {
-    // Unregister old SW versions first to ensure fresh install
-    const regs = await navigator.serviceWorker.getRegistrations();
-    for (const reg of regs) {
-      if (!reg.active?.scriptURL?.includes('sw.js')) await reg.unregister();
-    }
-    window._swReg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
-    // Wait for SW to be active
-    if (window._swReg.installing) {
-      await new Promise(resolve => {
-        window._swReg.installing.addEventListener('statechange', e => {
-          if (e.target.state === 'activated') resolve();
-        });
-      });
-    }
-    console.log('SW registered and active');
-  } catch(e) {
-    console.warn('SW registration failed:', e.message);
-  }
+  try { window._swReg = await navigator.serviceWorker.register('./sw.js'); }
+  catch(e) { console.warn('SW:', e.message); }
 }
-
 function checkNotifPermission() {
   if (!('Notification' in window)) return;
-  const b = document.getElementById('notif-banner');
   if (Notification.permission === 'default') {
+    const b = document.getElementById('notif-banner');
     if (b) b.style.display = 'flex';
-  } else if (Notification.permission === 'denied') {
-    if (b) {
-      b.style.display = 'flex';
-      b.innerHTML = '<span>⚠️ Notifications are blocked. Enable them in browser settings.</span>';
-    }
-  } else {
-    // Already granted — hide banner
-    if (b) b.style.display = 'none';
   }
 }
-
 async function requestNotifPermission() {
-  if (!('Notification' in window)) {
-    showToast('❌ Notifications not supported on this browser.');
-    return;
-  }
-  if (Notification.permission === 'denied') {
-    showToast('❌ Notifications blocked. Go to browser Settings → Site Settings → Notifications → Allow.');
-    return;
-  }
   const perm = await Notification.requestPermission();
   const b = document.getElementById('notif-banner');
   if (b) b.style.display = 'none';
   if (perm === 'granted') {
     await registerServiceWorker();
     showToast('🔔 Notifications enabled!');
-    // Reschedule all medicines
     medicines.forEach(scheduleNotification);
-    // Test notification so user knows it works
-    setTimeout(() => {
-      new Notification('✅ MediCompanion notifications active!', {
-        body: 'You will now receive medicine reminders on time.',
-        icon: './icons/icon-192.png',
-      });
-    }, 1000);
   } else {
-    showToast('Notifications were not allowed. You can enable them in browser settings.');
+    showToast('Notifications blocked — enable in browser settings.');
   }
 }
 function scheduleNotification(med) {
@@ -758,11 +782,8 @@ function scheduleNotification(med) {
   const target = new Date();
   target.setHours(h, m, 0, 0);
   if (target <= now) target.setDate(target.getDate() + 1);
-  const delay = target - now;
 
-  // Don't schedule if more than 24 hours away (will be rescheduled on next open)
-  if (delay > 24 * 60 * 60 * 1000) return;
-
+  const delay      = target - now;
   const missDelay  = delay + (10 * 60 * 1000); // 10 minutes after reminder time
 
   const title      = '💊 Time for ' + med.name;
@@ -902,112 +923,41 @@ function switchMode(mode) {
 ══════════════════════════════════════ */
 let searchTimeout=null;
 
-/* ── Fuzzy similarity score between two strings ── */
-function fuzzyScore(str, query) {
-  const s = str.toLowerCase();
-  const q = query.toLowerCase();
-  if (s === q)           return 100;
-  if (s.startsWith(q))   return 90;
-  if (s.includes(q))     return 80;
-
-  // Partial character overlap score
-  let overlap = 0;
-  for (let i = 0; i < q.length; i++) {
-    if (s.includes(q[i])) overlap++;
-  }
-  const overlapScore = Math.round((overlap / q.length) * 60);
-
-  // Edit distance (Levenshtein) — handles typos like "dibeates" → "diabetes"
-  const dp = Array.from({ length: q.length + 1 }, (_, i) => [i]);
-  for (let j = 0; j <= s.length; j++) dp[0][j] = j;
-  for (let i = 1; i <= q.length; i++) {
-    for (let j = 1; j <= s.length; j++) {
-      dp[i][j] = q[i-1] === s[j-1]
-        ? dp[i-1][j-1]
-        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
-    }
-  }
-  const editDist  = dp[q.length][Math.min(s.length, q.length + 3)];
-  const editScore = Math.max(0, 70 - editDist * 15);
-
-  return Math.max(overlapScore, editScore);
-}
-
-/* ── Get similar disease names from offline DB ── */
+/* ── Get similar disease names from offline DB for a partial query ── */
 function getSimilarSuggestions(query) {
   const q = query.toLowerCase().trim();
   if (!q || q.length < 2) return [];
 
-  const scored = [];
-
+  const matches = [];
   for (const d of DISEASE_DB) {
-    let best = 0;
-
-    // Score against disease name and all its words
-    best = Math.max(best, fuzzyScore(d.name, q));
-    d.name.toLowerCase().split(/[\s,&]+/).forEach(word => {
-      if (word.length >= 2) best = Math.max(best, fuzzyScore(word, q));
-    });
-
-    // Score against all aliases
-    for (const alias of (d.aliases || [])) {
-      best = Math.max(best, fuzzyScore(alias, q));
-      alias.split(/[\s,&]+/).forEach(word => {
-        if (word.length >= 2) best = Math.max(best, fuzzyScore(word, q));
-      });
+    let matched = false;
+    // Match disease name
+    if (d.name.toLowerCase().includes(q)) {
+      matches.push({ name: d.name, emoji: d.emoji }); matched = true;
     }
-
-    if (best >= 35) scored.push({ name: d.name, emoji: d.emoji, score: best });
+    // Match aliases
+    if (!matched) {
+      for (const alias of d.aliases) {
+        if (alias.includes(q) || q.includes(alias.slice(0, Math.min(alias.length, q.length)))) {
+          matches.push({ name: d.name, emoji: d.emoji }); break;
+        }
+      }
+    }
+    if (matches.length >= 5) break; // max 5 suggestions
   }
-
-  // Sort by score descending, return top 5
-  return scored
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
-    .map(({ name, emoji }) => ({ name, emoji }));
+  return matches;
 }
 
-/* ── Better offline DB search using fuzzy scoring ── */
-function searchOfflineDB(query) {
-  const q = query.toLowerCase().trim();
-  if (!q || q.length < 2) return null;
-
-  let best = null;
-  let bestScore = 0;
-
-  for (const d of DISEASE_DB) {
-    let score = 0;
-
-    // Exact match wins immediately
-    if (d.name.toLowerCase() === q) return d;
-
-    score = Math.max(score, fuzzyScore(d.name, q));
-    d.name.toLowerCase().split(/[\s,]+/).forEach(w => {
-      if (w.length >= 2) score = Math.max(score, fuzzyScore(w, q));
-    });
-    for (const alias of (d.aliases || [])) {
-      score = Math.max(score, fuzzyScore(alias, q));
-      alias.split(/[\s,]+/).forEach(w => {
-        if (w.length >= 2) score = Math.max(score, fuzzyScore(w, q));
-      });
-    }
-
-    if (score > bestScore) { bestScore = score; best = d; }
-  }
-
-  // Only return if confident enough
-  return bestScore >= 55 ? best : null;
-}
-
-/* ── Update suggestion pills dynamically using fuzzy matching ── */
+/* ── Update suggestion pills dynamically ── */
 function updateSuggestions(val) {
-  const defaultEl = document.getElementById('sugg-default');
-  const similarEl = document.getElementById('sugg-similar');
-  const labelEl   = document.getElementById('sugg-label');
+  const defaultEl  = document.getElementById('sugg-default');
+  const similarEl  = document.getElementById('sugg-similar');
+  const labelEl    = document.getElementById('sugg-label');
 
   if (!val || val.trim().length < 2) {
+    // Show default pills
     if (defaultEl)  defaultEl.style.display = '';
-    if (similarEl) { similarEl.style.display = 'none'; similarEl.innerHTML = ''; }
+    if (similarEl)  similarEl.style.display = 'none';
     if (labelEl)    labelEl.textContent = 'Try:';
     return;
   }
@@ -1015,19 +965,20 @@ function updateSuggestions(val) {
   const suggestions = getSimilarSuggestions(val.trim());
 
   if (suggestions.length === 0) {
+    // No matches — hide suggestions, keep label
     if (defaultEl) defaultEl.style.display = 'none';
-    if (similarEl) { similarEl.style.display = 'none'; similarEl.innerHTML = ''; }
-    if (labelEl)   labelEl.textContent = 'Try:';
+    if (similarEl) similarEl.style.display = 'none';
+    if (labelEl)   labelEl.textContent = 'No similar results in offline database';
     return;
   }
 
-  // Show fuzzy-matched similar pills
+  // Show similar matches
   if (defaultEl) defaultEl.style.display = 'none';
   if (labelEl)   labelEl.textContent = 'Similar:';
   if (similarEl) {
     similarEl.style.display = '';
     similarEl.innerHTML = suggestions
-      .map(s => `<button class="sugg-pill sugg-pill-similar" onclick="searchFor('${s.name.toLowerCase().replace(/'/g, "\'")}')">${s.emoji} ${escapeHtml(s.name)}</button>`)
+      .map(s => `<button class="sugg-pill sugg-pill-similar" onclick="searchFor('${escapeHtml(s.name.toLowerCase())}')">${s.emoji} ${escapeHtml(s.name)}</button>`)
       .join('');
   }
 }
@@ -1180,6 +1131,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dl = document.getElementById('date-label');
   if (dl) dl.textContent = fullDateLabel();
 
+  // Pick up Google OAuth session if redirected back from Google
+  await pickupGoogleSession();
+
   // First visit — show onboarding screen instead of app
   if (!localStorage.getItem('mr_onboarded')) {
     showOnboarding();
@@ -1191,21 +1145,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // If logged in, load medicines from backend
   if (isLoggedIn() && navigator.onLine) {
     await loadMedicinesFromBackend();
+    renderMedicines(); renderHome();
   }
-  cleanTakenList();
-  renderMedicines(); renderHome();
 
   processPendingActions();
   checkNotifPermission();
 
-  // Register SW and schedule notifications if permission already granted
-  if ('serviceWorker' in navigator) {
-    if (Notification.permission === 'granted') {
-      await registerServiceWorker();
-      medicines.forEach(scheduleNotification);
-    } else {
-      // Still register SW for offline caching even without notification permission
-      registerServiceWorker().catch(() => {});
-    }
+  if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+    await registerServiceWorker();
+    medicines.forEach(scheduleNotification);
   }
 });
